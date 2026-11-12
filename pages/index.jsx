@@ -96,7 +96,7 @@ export default function Home() {
 
   // История транзакций
   const [transactions, setTransactions] = useState([
-    ких = { id: 1, type: 'expense', title: 'Еда и продукты', amountUSD: 120, date: 'Сегодня' },
+    { id: 1, type: 'expense', title: 'Еда и продукты', amountUSD: 120, date: 'Сегодня' },
     { id: 2, type: 'income', title: 'Пополнение', amountUSD: 500, date: 'Вчера' }
   ]);
 
@@ -104,7 +104,7 @@ export default function Home() {
   const [currency, setCurrency] = useState('$');
   const [lang, setLang] = useState('ru');
   const [category, setCategory] = useState('food');
-  const [activeTab, setActiveTab] = useState('expense'); // 'expense' или 'income'
+  const [activeTab, setActiveTab] = useState('expense');
 
   const dict = t[lang];
   const rate = RATES[currency];
@@ -163,27 +163,20 @@ export default function Home() {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", 
       maxWidth: "440px", 
       margin: "0 auto", 
-      background: "#141715", // Матовый темно-болотный фон
-      color: "#eae4d9",       // Теплый бежевый текст
+      background: "#141715", 
+      color: "#eae4d9", 
       minHeight: "100vh",
       boxSizing: "border-box"
     }}>
-      {/* Шапка: Широкие и комфортные селекторы с плотным шрифтом */}
+      {/* Шапка: Селекторы */}
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px", gap: "12px" }}>
         <select 
           value={lang} 
           onChange={(e) => setLang(e.target.value)}
           style={{ 
-            background: "#1e2320", 
-            color: "#eae4d9", 
-            border: "1px solid #2f3833", 
-            padding: "12px 14px", 
-            borderRadius: "14px", 
-            fontSize: "15px", 
-            fontWeight: "600",
-            outline: "none", 
-            flex: 1,
-            cursor: "pointer"
+            background: "#1e2320", color: "#eae4d9", border: "1px solid #2f3833", 
+            padding: "12px 14px", borderRadius: "14px", fontSize: "15px", fontWeight: "600",
+            outline: "none", flex: 1, cursor: "pointer"
           }}
         >
           <option value="ru">🇷🇺 Русский</option>
@@ -196,16 +189,9 @@ export default function Home() {
           value={currency} 
           onChange={(e) => setCurrency(e.target.value)}
           style={{ 
-            background: "#1e2320", 
-            color: "#eae4d9", 
-            border: "1px solid #2f3833", 
-            padding: "12px 14px", 
-            borderRadius: "14px", 
-            fontSize: "15px", 
-            fontWeight: "600",
-            outline: "none", 
-            flex: 1,
-            cursor: "pointer"
+            background: "#1e2320", color: "#eae4d9", border: "1px solid #2f3833", 
+            padding: "12px 14px", borderRadius: "14px", fontSize: "15px", fontWeight: "600",
+            outline: "none", flex: 1, cursor: "pointer"
           }}
         >
           <option value="$">USD ($)</option>
@@ -217,24 +203,19 @@ export default function Home() {
         </select>
       </div>
 
-      <h2 style={{ textAlign: "center", marginBottom: "20px", fontWeight: "700", fontSize: "22px", letterSpacing: "0.3px", color: "#f2ece1" }}>{dict.title}</h2>
+      <h2 style={{ textAlign: "center", marginBottom: "20px", fontWeight: "700", fontSize: "22px", color: "#f2ece1" }}>{dict.title}</h2>
       
-      {/* Карточка баланса в теплой гамме */}
+      {/* Баланс */}
       <div style={{ 
         background: "linear-gradient(145deg, #1f2622 0%, #171c19 100%)", 
-        border: "1px solid #2b3530",
-        color: "#eae4d9", 
-        padding: "26px", 
-        borderRadius: "22px", 
-        textAlign: "center", 
-        marginBottom: "20px", 
-        boxShadow: "0 10px 25px rgba(0,0,0,0.35)" 
+        border: "1px solid #2b3530", color: "#eae4d9", padding: "26px", borderRadius: "22px", 
+        textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px rgba(0,0,0,0.35)" 
       }}>
         <p style={{ margin: 0, fontSize: "12px", color: "#9da6a0", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>{dict.balance}</p>
         <h1 style={{ margin: "10px 0 0 0", fontSize: "36px", fontWeight: "700", color: "#fff" }}>{formatVal(baseBalanceUSD)} {currency}</h1>
       </div>
 
-      {/* Переключатель вкладки Расход / Доход */}
+      {/* Переключатель вкладки */}
       <div style={{ display: "flex", background: "#1b211e", padding: "4px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #2b3530" }}>
         <button 
           type="button"
@@ -262,34 +243,25 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Форма ввода */}
+      {/* Форма */}
       <form onSubmit={handleAction} style={{ 
-        background: "#1a201d", 
-        border: "1px solid #2b3530",
-        padding: "20px", 
-        borderRadius: "22px", 
-        marginBottom: "20px", 
-        boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
+        background: "#1a201d", border: "1px solid #2b3530", padding: "20px", borderRadius: "22px", 
+        marginBottom: "20px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
         <div style={{ marginBottom: "14px" }}>
-          <label style={{ display: "block", fontSize: "12px", color: "#9da6a0", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{dict.amount} ({currency})</label>
+          <label style={{ display: "block", fontSize: "12px", color: "#9da6a0", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase" }}>{dict.amount} ({currency})</label>
           <input 
-            type="number" 
-            step="any"
-            value={amount} 
-            onChange={(e) => setAmount(e.target.value)} 
-            placeholder="0.00" 
-            style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "1px solid #303d36", background: "#141715", color: "white", fontSize: "16px", boxSizing: "border-box", outline: "none" }}
+            type="number" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" 
+            style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "1px solid #303d36", background: "#141715", color: "white", fontSize: "16px", outline: "none", boxSizing: "border-box" }}
           />
         </div>
 
         {activeTab === 'expense' && (
           <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", fontSize: "12px", color: "#9da6a0", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{dict.category}</label>
+            <label style={{ display: "block", fontSize: "12px", color: "#9da6a0", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase" }}>{dict.category}</label>
             <select 
-              value={category} 
-              onChange={(e) => setCategory(e.target.value)}
-              style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "1px solid #303d36", background: "#141715", color: "white", fontSize: "15px", boxSizing: "border-box", outline: "none", cursor: "pointer" }}
+              value={category} onChange={(e) => setCategory(e.target.value)}
+              style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "1px solid #303d36", background: "#141715", color: "white", fontSize: "15px", outline: "none", cursor: "pointer", boxSizing: "border-box" }}
             >
               <option value="food">🍔 {dict.categories.food}</option>
               <option value="transport">🚗 {dict.categories.transport}</option>
@@ -300,33 +272,20 @@ export default function Home() {
         )}
 
         <button type="submit" style={{ 
-          width: "100%", 
-          background: activeTab === 'expense' ? "#8c384a" : "#4a7c59", 
-          color: "white", 
-          border: "none", 
-          padding: "14px", 
-          borderRadius: "14px", 
-          fontWeight: "700", 
-          fontSize: "15px", 
-          cursor: "pointer",
-          boxShadow: activeTab === 'expense' ? "0 4px 14px rgba(140,56,74,0.4)" : "0 4px 14px rgba(74,124,89,0.4)",
-          transition: "background 0.2s ease"
+          width: "100%", background: activeTab === 'expense' ? "#8c384a" : "#4a7c59", color: "white", 
+          border: "none", padding: "14px", borderRadius: "14px", fontWeight: "700", fontSize: "15px", cursor: "pointer",
+          boxShadow: activeTab === 'expense' ? "0 4px 14px rgba(140,56,74,0.4)" : "0 4px 14px rgba(74,124,89,0.4)"
         }}>
           {activeTab === 'expense' ? dict.addBtn : dict.incomeBtn}
         </button>
       </form>
 
-      {/* Блок аналитики (График) */}
+      {/* График */}
       <div style={{ 
-        background: "#1a201d", 
-        border: "1px solid #2b3530",
-        padding: "20px", 
-        borderRadius: "22px", 
-        marginBottom: "20px",
-        boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
+        background: "#1a201d", border: "1px solid #2b3530", padding: "20px", borderRadius: "22px", 
+        marginBottom: "20px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
         <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: "600", textAlign: "center", color: "#f2ece1" }}>{dict.analytics}</h3>
-        
         {totalSpentUSD === 0 ? (
           <p style={{ color: "#9da6a0", fontSize: "13px", textAlign: "center", margin: 0 }}>{dict.noExpenses}</p>
         ) : (
@@ -336,24 +295,14 @@ export default function Home() {
                 {chartSegments.map(seg => (
                   seg.percent > 0 && (
                     <circle
-                      key={seg.key}
-                      cx="18"
-                      cy="18"
-                      r="15.915"
-                      fill="transparent"
-                      stroke={seg.color}
-                      strokeWidth="3.8"
-                      strokeDasharray={seg.strokeDasharray}
-                      strokeDashoffset={seg.strokeDashoffset}
+                      key={seg.key} cx="18" cy="18" r="15.915" fill="transparent"
+                      stroke={seg.color} strokeWidth="3.8" strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset}
                       style={{ transition: "all 0.4s ease" }}
                     />
                   )
                 ))}
               </svg>
-              <div style={{ 
-                position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" 
-              }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ fontSize: "10px", color: "#9da6a0", fontWeight: "600" }}>{dict.totalSpent}</span>
                 <span style={{ fontSize: "13px", fontWeight: "700", marginTop: "2px", color: "#fff" }}>{formatVal(totalSpentUSD)} {currency}</span>
               </div>
@@ -376,13 +325,9 @@ export default function Home() {
         )}
       </div>
 
-      {/* Лента истории транзакций */}
+      {/* История */}
       <div style={{ 
-        background: "#1a201d", 
-        border: "1px solid #2b3530",
-        padding: "20px", 
-        borderRadius: "22px", 
-        boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
+        background: "#1a201d", border: "1px solid #2b3530", padding: "20px", borderRadius: "22px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
         <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: "600", color: "#f2ece1" }}>{dict.history}</h3>
         {transactions.length === 0 ? (
