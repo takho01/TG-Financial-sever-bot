@@ -1,7 +1,3 @@
-import postgres from 'postgres';
-
-const sql = postgres(process.env.DATABASE_URL, { ssl: 'require' });
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(200).json({ status: 'Bot server is running!' });
@@ -16,8 +12,6 @@ export default async function handler(req, res) {
   const chatId = message.chat.id;
   const text = message.text;
   const botToken = process.env.BOT_TOKEN;
-  
-  // Ссылка на ваш задеплоенный проект на Vercel
   const webAppUrl = "https://tg-financial-sever-bot.vercel.app";
 
   if (text === '/start' || text === '/app') {
@@ -26,7 +20,7 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: "Привет! Это твой личный финансовый помощник. Нажми на кнопку ниже, чтобы открыть кошелек и управлять расходами:",
+        text: "Жми на кнопку ниже, чтобы открыть кошелек:",
         reply_markup: {
           inline_keyboard: [
             [
