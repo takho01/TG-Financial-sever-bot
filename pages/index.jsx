@@ -5,7 +5,7 @@ const RATES = {
   '€': 0.92,
   '₸': 495,
   '₼': 1.70,
-  '฿': 35.5, // <-- Добавили тайский бат
+  '฿': 35.5, // Тайский бат
   'USDT': 1,
   'TON': 5.5
 };
@@ -27,6 +27,7 @@ const t = {
     noExpenses: "Пока нет расходов. Добавьте первый!",
     noHistory: "История операций пуста",
     totalSpent: "Всего потрачено",
+    delete: "Удалить",
     periods: { day: "День", week: "Неделя", month: "Месяц", year: "Год" },
     categories: { 
       housing: "🏡 Жилье", 
@@ -52,6 +53,7 @@ const t = {
     noExpenses: "No expenses yet.",
     noHistory: "No transactions yet",
     totalSpent: "Total Spent",
+    delete: "Delete",
     periods: { day: "Day", week: "Week", month: "Month", year: "Year" },
     categories: { 
       housing: "🏡 Housing", 
@@ -77,6 +79,7 @@ const t = {
     noExpenses: "Әзірге шығындар жоқ.",
     noHistory: "Транзакциялар жоқ",
     totalSpent: "Барлығы жұмсалды",
+    delete: "Жою",
     periods: { day: "Күн", week: "Апта", month: "Ай", year: "Жыл" },
     categories: { 
       housing: "🏡 Тұрғын үй", 
@@ -102,7 +105,8 @@ const t = {
     noExpenses: "Hələ xərc yoxdur.",
     noHistory: "Əməliyyat yoxdur",
     totalSpent: "Ümumi xərc",
-    periods: { day: "Gün", week: " Həftə", month: "Ay", year: "İl" },
+    delete: "Sil",
+    periods: { day: "Gün", week: "Həftə", month: "Ay", year: "İl" },
     categories: { 
       housing: "🏡 Mənzil", 
       utilities: "💡 Kommunal", 
@@ -114,15 +118,14 @@ const t = {
 };
 
 const CATEGORY_COLORS = {
-  housing: "#d48344",     // Охристый
-  utilities: "#4a7c59",   // Болотный
-  groceries: "#3b82f6",   // Яркий синий
-  restaurants: "#8c384a", // Бордовый
-  other: "#737a72"        // Серый
+  housing: "#d48344",     
+  utilities: "#4a7c59",   
+  groceries: "#3b82f6",   
+  restaurants: "#8c384a", 
+  other: "#737a72"        
 };
 
 export default function Home() {
-  // Загружаем данные из localStorage, если они есть, иначе используем дефолтные
   const [baseBalanceUSD, setBaseBalanceUSD] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fin_balance');
@@ -134,18 +137,15 @@ export default function Home() {
   const [expensesUSD, setExpensesUSD] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fin_expenses');
-      return saved !== null ? JSON.parse(saved) : { housing: 300, utilities: 80, groceries: 450, restaurants: 200, other: 50 };
+      return saved !== null ? JSON.parse(saved) : { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
     }
-    return { housing: 300, utilities: 80, groceries: 450, restaurants: 200, other: 50 };
+    return { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
   });
 
   const [transactions, setTransactions] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fin_txs');
-      return saved !== null ? JSON.parse(saved) : [
-        { id: 1, type: 'expense', title: '🛒 Продукты (магазин/рынок)', amountUSD: 120, date: 'Сегодня' },
-        { id: 2, type: 'income', title: 'Пополнение', amountUSD: 500, date: 'Вчера' }
-      ];
+      return saved !== null ? JSON.parse(saved) : [];
     }
     return [];
   });
@@ -158,7 +158,6 @@ export default function Home() {
   const [period, setPeriod] = useState('month');
   const [showAllModal, setShowAllModal] = useState(false);
 
-  // Сохраняем в localStorage при каждом изменении
   useEffect(() => {
     localStorage.setItem('fin_balance', baseBalanceUSD);
     localStorage.setItem('fin_expenses', JSON.stringify(expensesUSD));
@@ -182,6 +181,7 @@ export default function Home() {
     if (!numAmount || numAmount <= 0) return;
 
     const valInUSD = numAmount / rate;
+    const newTxId = Date.now();
 
     if (activeTab === 'expense') {
       setBaseBalanceUSD(prev => prev - valInUSD);
@@ -190,17 +190,36 @@ export default function Home() {
         [category]: (prev[category] || 0) + valInUSD
       }));
       setTransactions(prev => [
-        { id: Date.now(), type: 'expense', title: dict.categories[category], amountUSD: valInUSD, date: 'Только что' },
+        { id: newTxId, type: 'expense', categoryKey: category, title: dict.categories[category], amountUSD: valInUSD, date: 'Только что' },
         ...prev
       ]);
     } else {
       setBaseBalanceUSD(prev => prev + valInUSD);
       setTransactions(prev => [
-        { id: Date.now(), type: 'income', title: dict.addIncome, amountUSD: valInUSD, date: 'Только что' },
+        { id: newTxId, type: 'income', title: dict.addIncome, amountUSD: valInUSD, date: 'Только что' },
         ...prev
       ]);
     }
     setAmount('');
+  };
+
+  // Функция удаления транзакции с пересчетом баланса и графиков
+  const deleteTransaction = (id) => {
+    const txToDelete = transactions.find(tx => tx.id === id);
+    if (!txToDelete) return;
+
+    if (txToDelete.type === 'expense') {
+      setBaseBalanceUSD(prev => prev + txToDelete.amountUSD);
+      setExpensesUSD(prev => {
+        const catKey = txToDelete.categoryKey || 'other';
+        const updatedVal = Math.max(0, (prev[catKey] || 0) - txToDelete.amountUSD);
+        return { ...prev, [catKey]: updatedVal };
+      });
+    } else {
+      setBaseBalanceUSD(prev => prev - txToDelete.amountUSD);
+    }
+
+    setTransactions(prev => prev.filter(tx => tx.id !== id));
   };
 
   const totalSpentUSD = Object.values(expensesUSD).reduce((a, b) => a + b, 0);
@@ -247,6 +266,7 @@ export default function Home() {
           <option value="€">EUR (€)</option>
           <option value="₸">KZT (₸)</option>
           <option value="₼">AZN (₼)</option>
+          <option value="฿">THB (฿)</option>
           <option value="USDT">USDT</option>
           <option value="TON">TON</option>
         </select>
@@ -264,13 +284,11 @@ export default function Home() {
         <h1 style={{ margin: "10px 0 0 0", fontSize: "34px", fontWeight: "700", color: "#fff" }}>{formatVal(baseBalanceUSD)} {currency}</h1>
       </div>
 
-      {/* Таймлайн периодов (День, Неделя, Месяц, Год) как на референсах */}
+      {/* Таймлайн периодов */}
       <div style={{ display: "flex", background: "#1b211e", padding: "4px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #2b3530" }}>
         {['day', 'week', 'month', 'year'].map(p => (
           <button 
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
+            key={p} type="button" onClick={() => setPeriod(p)}
             style={{ 
               flex: 1, padding: "8px 0", borderRadius: "10px", border: "none", fontWeight: "600", fontSize: "12px", cursor: "pointer",
               background: period === p ? "#2b3530" : "transparent", 
@@ -286,8 +304,7 @@ export default function Home() {
       {/* Переключатель вкладки Расход / Доход */}
       <div style={{ display: "flex", background: "#1b211e", padding: "4px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #2b3530" }}>
         <button 
-          type="button"
-          onClick={() => setActiveTab('expense')}
+          type="button" onClick={() => setActiveTab('expense')}
           style={{ 
             flex: 1, padding: "10px", borderRadius: "10px", border: "none", fontWeight: "600", fontSize: "14px", cursor: "pointer",
             background: activeTab === 'expense' ? "#8c384a" : "transparent", 
@@ -298,8 +315,7 @@ export default function Home() {
           {dict.addExpense}
         </button>
         <button 
-          type="button"
-          onClick={() => setActiveTab('income')}
+          type="button" onClick={() => setActiveTab('income')}
           style={{ 
             flex: 1, padding: "10px", borderRadius: "10px", border: "none", fontWeight: "600", fontSize: "14px", cursor: "pointer",
             background: activeTab === 'income' ? "#4a7c59" : "transparent", 
@@ -394,7 +410,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* История транзакций + кнопка Подробнее */}
+      {/* История транзакций (кратко) */}
       <div style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
@@ -420,8 +436,17 @@ export default function Home() {
                   <div style={{ fontWeight: "600", fontSize: "13px", color: "#eae4d9" }}>{tx.title}</div>
                   <div style={{ fontSize: "10px", color: "#9da6a0", marginTop: "2px" }}>{tx.date}</div>
                 </div>
-                <div style={{ fontWeight: "700", fontSize: "14px", color: tx.type === 'income' ? "#4a7c59" : "#e56b73" }}>
-                  {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amountUSD)} {currency}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ fontWeight: "700", fontSize: "14px", color: tx.type === 'income' ? "#4a7c59" : "#e56b73" }}>
+                    {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amountUSD)} {currency}
+                  </div>
+                  <button 
+                    onClick={() => deleteTransaction(tx.id)}
+                    style={{ background: "transparent", border: "none", color: "#8c384a", cursor: "pointer", fontSize: "12px", padding: "2px" }}
+                    title={dict.delete}
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
             ))}
@@ -429,7 +454,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Модальное окно «Подробнее» со всей историей */}
+      {/* Модальное окно «Подробнее» со всей историей и возможностью удаления */}
       {showAllModal && (
         <div style={{ 
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
@@ -449,19 +474,31 @@ export default function Home() {
                 {dict.close}
               </button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {transactions.map(tx => (
-                <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "10px", borderBottom: "1px solid #242c27" }}>
-                  <div>
-                    <div style={{ fontWeight: "600", fontSize: "14px", color: "#eae4d9" }}>{tx.title}</div>
-                    <div style={{ fontSize: "11px", color: "#9da6a0", marginTop: "2px" }}>{tx.date}</div>
+            {transactions.length === 0 ? (
+              <p style={{ color: "#9da6a0", fontSize: "13px", textAlign: "center", margin: "20px 0" }}>{dict.noHistory}</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {transactions.map(tx => (
+                  <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "10px", borderBottom: "1px solid #242c27" }}>
+                    <div>
+                      <div style={{ fontWeight: "600", fontSize: "14px", color: "#eae4d9" }}>{tx.title}</div>
+                      <div style={{ fontSize: "11px", color: "#9da6a0", marginTop: "2px" }}>{tx.date}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ fontWeight: "700", fontSize: "15px", color: tx.type === 'income' ? "#4a7c59" : "#e56b73" }}>
+                        {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amountUSD)} {currency}
+                      </div>
+                      <button 
+                        onClick={() => deleteTransaction(tx.id)}
+                        style={{ background: "#2a1e20", border: "1px solid #4a272b", color: "#e56b73", borderRadius: "8px", cursor: "pointer", fontSize: "12px", padding: "4px 8px" }}
+                      >
+                        {dict.delete}
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ fontWeight: "700", fontSize: "15px", color: tx.type === 'income' ? "#4a7c59" : "#e56b73" }}>
-                    {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amountUSD)} {currency}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
