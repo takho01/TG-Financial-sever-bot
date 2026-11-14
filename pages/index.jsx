@@ -28,7 +28,7 @@ const t = {
     noHistory: "История операций пуста",
     totalSpent: "Всего потрачено",
     delete: "Удалить",
-    resetFilter: "Сбросить фильтр категории",
+    resetFilter: "Сбросить фильтр",
     periods: { day: "День", week: "Неделя", month: "Месяц", year: "Год" },
     categories: { 
       housing: "🏡 Жилье", 
@@ -55,7 +55,7 @@ const t = {
     noHistory: "No transactions yet",
     totalSpent: "Total Spent",
     delete: "Delete",
-    resetFilter: "Reset category filter",
+    resetFilter: "Reset filter",
     periods: { day: "Day", week: "Week", month: "Month", year: "Year" },
     categories: { 
       housing: "🏡 Housing", 
@@ -82,7 +82,7 @@ const t = {
     noHistory: "Транзакциялар жоқ",
     totalSpent: "Барлығы жұмсалды",
     delete: "Жою",
-    resetFilter: "Санат сүзгісін тазарту",
+    resetFilter: "Сүзгіні тазарту",
     periods: { day: "Күн", week: "Апта", month: "Ай", year: "Жыл" },
     categories: { 
       housing: "🏡 Тұрғын үй", 
@@ -109,7 +109,7 @@ const t = {
     noHistory: "Əməliyyat yoxdur",
     totalSpent: "Ümumi xərc",
     delete: "Sil",
-    resetFilter: "Kateqoriya filtrini sıfırla",
+    resetFilter: "Filtri sıfırla",
     periods: { day: "Gün", week: "Həftə", month: "Ay", year: "İl" },
     categories: { 
       housing: "🏡 Mənzil", 
@@ -130,29 +130,9 @@ const CATEGORY_COLORS = {
 };
 
 export default function Home() {
-  const [baseBalanceUSD, setBaseBalanceUSD] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('fin_balance');
-      return saved !== null ? Number(saved) : 1500;
-    }
-    return 1500;
-  });
-
-  const [transactions, setTransactions] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('fin_txs');
-      if (saved !== null) return JSON.parse(saved);
-    }
-    // Демо-данные с реальными timestamp для проверки периодов
-    const now = Date.now();
-    const day = 24 * 60 * 60 * 1000;
-    return [
-      { id: now, type: 'expense', categoryKey: 'groceries', title: 'Продукты (магазин/рынок)', amountUSD: 123, timestamp: now - 1000 * 60 * 5, date: 'Только что' },
-      { id: now - 1, type: 'expense', categoryKey: 'housing', title: 'Жилье', amountUSD: 300, timestamp: now - day * 2, date: '2 дня назад' },
-      { id: now - 2, type: 'income', title: 'Пополнение', amountUSD: 500, timestamp: now - day * 5, date: '5 дней назад' },
-      { id: now - 3, type: 'expense', categoryKey: 'restaurants', title: 'Кафе / рестораны', amountUSD: 200, timestamp: now - day * 15, date: '15 дней назад' }
-    ];
-  });
+  const [chatId, setChatId] = useState('default_user');
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('$');
@@ -163,10 +143,36 @@ export default function Home() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(null);
   const [showAllModal, setShowAllModal] = useState(false);
 
+  // Получаем Telegram ID пользователя при запуске
   useEffect(() => {
-    localStorage.setItem('fin_balance', baseBalanceUSD);
-    localStorage.setItem('fin_txs', JSON.stringify(transactions));
-  }, [baseBalanceUSD, transactions]);
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      if (tg.initDataUnsafe?.user?.id) {
+        setChatId(String(tg.initDataUnsafe.user.id));
+      }
+    }
+  }, []);
+
+  // Загрузка транзакций из базы Neon
+  useEffect(() => {
+    async function fetchTransactions() {
+      try {
+        const res = await fetch('/api/transactions');
+        const json = await res.json();
+        if (json.success) {
+          // Фильтруем транзакции конкретно для текущего пользователя (или показываем все, если бэкенд возвращает общие, но лучше по chatId)
+          const userTxs = json.data.filter(tx => !tx.chat_id || tx.chat_id === chatId || chatId === 'default_user');
+          setTransactions(userTxs);
+        }
+      } catch (err) {
+        console.error("Ошибка загрузки транзакций:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTransactions();
+  }, [chatId]);
 
   const dict = t[lang];
   const rate = RATES[currency];
@@ -179,11 +185,16 @@ export default function Home() {
     return Math.round(converted).toLocaleString('en-US');
   };
 
-  // Фильтрация транзакций по выбранному периоду (День, Неделя, Месяц, Год)
+  // Расчет текущего баланса на основе истории (стартовый баланс 0 + доходы - расходы)
+  const totalIncomeUSD = transactions.filter(tx => tx.type === 'income').reduce((acc, tx) => acc + Number(tx.amount_usd || tx.amountUSD), 0);
+  const totalExpenseUSD = transactions.filter(tx => tx.type === 'expense').reduce((acc, tx) => acc + Number(tx.amount_usd || tx.amountUSD), 0);
+  const currentBalanceUSD = totalIncomeUSD - totalExpenseUSD;
+
+  // Фильтрация по периоду
   const filteredByPeriodTransactions = transactions.filter(tx => {
-    if (!tx.timestamp) return true; // если старая запись без таймстампа
+    if (!tx.timestamp) return true;
     const now = Date.now();
-    const diff = now - tx.timestamp;
+    const diff = now - Number(tx.timestamp);
     const dayMs = 24 * 60 * 60 * 1000;
 
     if (period === 'day') return diff <= dayMs;
@@ -193,12 +204,12 @@ export default function Home() {
     return true;
   });
 
-  // Расчет расходов по категориям на основе отфильтрованных по периоду данных
+  // Расходы по категориям
   const periodExpenses = { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
   filteredByPeriodTransactions.forEach(tx => {
     if (tx.type === 'expense') {
-      const cat = tx.categoryKey || 'other';
-      periodExpenses[cat] = (periodExpenses[cat] || 0) + tx.amountUSD;
+      const cat = tx.category_key || tx.categoryKey || 'other';
+      periodExpenses[cat] = (periodExpenses[cat] || 0) + Number(tx.amount_usd || tx.amountUSD);
     }
   });
 
@@ -215,50 +226,61 @@ export default function Home() {
     return { key, val, percent, strokeDasharray, strokeDashoffset, color: CATEGORY_COLORS[key] };
   });
 
-  // Финальный список для отображения в истории (учитывает и период, и клик по категории)
   const displayedTransactions = filteredByPeriodTransactions.filter(tx => {
     if (selectedCategoryFilter) {
-      return tx.type === 'expense' && tx.categoryKey === selectedCategoryFilter;
+      return tx.type === 'expense' && (tx.category_key === selectedCategoryFilter || tx.categoryKey === selectedCategoryFilter);
     }
     return true;
   });
 
-  const handleAction = (e) => {
+  // Добавление транзакции через API в Neon
+  const handleAction = async (e) => {
     e.preventDefault();
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) return;
 
     const valInUSD = numAmount / rate;
-    const newTxId = Date.now();
+    const newTxData = {
+      chatId: chatId,
+      type: activeTab,
+      categoryKey: activeTab === 'expense' ? category : null,
+      title: activeTab === 'expense' ? dict.categories[category] : dict.addIncome,
+      amountUSD: valInUSD,
+      date: 'Только что'
+    };
 
-    if (activeTab === 'expense') {
-      setBaseBalanceUSD(prev => prev - valInUSD);
-      setTransactions(prev => [
-        { id: newTxId, type: 'expense', categoryKey: category, title: dict.categories[category], amountUSD: valInUSD, timestamp: Date.now(), date: 'Только что' },
-        ...prev
-      ]);
-    } else {
-      setBaseBalanceUSD(prev => prev + valInUSD);
-      setTransactions(prev => [
-        { id: newTxId, type: 'income', title: dict.addIncome, amountUSD: valInUSD, timestamp: Date.now(), date: 'Только что' },
-        ...prev
-      ]);
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTxData)
+      });
+      const json = await res.json();
+      if (json.success) {
+        setTransactions(prev => [json.data, ...prev]);
+        setAmount('');
+      }
+    } catch (err) {
+      console.error("Ошибка сохранения транзакции:", err);
     }
-    setAmount('');
   };
 
-  const deleteTransaction = (id) => {
-    const txToDelete = transactions.find(tx => tx.id === id);
-    if (!txToDelete) return;
-
-    if (txToDelete.type === 'expense') {
-      setBaseBalanceUSD(prev => prev + txToDelete.amountUSD);
-    } else {
-      setBaseBalanceUSD(prev => prev - txToDelete.amountUSD);
+  // Удаление транзакции через API из Neon
+  const deleteTransaction = async (id) => {
+    try {
+      const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setTransactions(prev => prev.filter(tx => tx.id !== id));
+      }
+    } catch (err) {
+      console.error("Ошибка удаления:", err);
     }
-
-    setTransactions(prev => prev.filter(tx => tx.id !== id));
   };
+
+  if (loading) {
+    return <div style={{ textAlign: "center", padding: "50px", color: "#eae4d9", background: "#141715", minHeight: "100vh" }}>Загрузка...</div>;
+  }
 
   return (
     <div style={{ 
@@ -299,14 +321,14 @@ export default function Home() {
 
       <h2 style={{ textAlign: "center", marginBottom: "16px", fontWeight: "700", fontSize: "22px", color: "#f2ece1" }}>{dict.title}</h2>
       
-      {/* Баланс */}
+      {/* Баланс (теперь по умолчанию 0) */}
       <div style={{ 
         background: "linear-gradient(145deg, #1f2622 0%, #171c19 100%)", 
         border: "1px solid #2b3530", color: "#eae4d9", padding: "24px", borderRadius: "22px", 
         textAlign: "center", marginBottom: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.35)" 
       }}>
         <p style={{ margin: 0, fontSize: "12px", color: "#9da6a0", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>{dict.balance}</p>
-        <h1 style={{ margin: "10px 0 0 0", fontSize: "34px", fontWeight: "700", color: "#fff" }}>{formatVal(baseBalanceUSD)} {currency}</h1>
+        <h1 style={{ margin: "10px 0 0 0", fontSize: "34px", fontWeight: "700", color: "#fff" }}>{formatVal(currentBalanceUSD)} {currency}</h1>
       </div>
 
       {/* Таймлайн периодов */}
@@ -390,7 +412,7 @@ export default function Home() {
         </button>
       </form>
 
-      {/* График аналитики (интерактивный) */}
+      {/* График аналитики */}
       <div style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", 
         marginBottom: "16px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
@@ -486,7 +508,7 @@ export default function Home() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <div style={{ fontWeight: "700", fontSize: "14px", color: tx.type === 'income' ? "#4a7c59" : "#e56b73" }}>
-                    {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amountUSD)} {currency}
+                    {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amount_usd || tx.amountUSD)} {currency}
                   </div>
                   <button 
                     onClick={() => deleteTransaction(tx.id)}
@@ -502,7 +524,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Модальное окно «Подробнее» */}
+      {/* Модальное окно */}
       {showAllModal && (
         <div style={{ 
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
@@ -534,7 +556,7 @@ export default function Home() {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <div style={{ fontWeight: "700", fontSize: "15px", color: tx.type === 'income' ? "#4a7c59" : "#e56b73" }}>
-                        {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amountUSD)} {currency}
+                        {tx.type === 'income' ? '+' : '-'}{formatVal(tx.amount_usd || tx.amountUSD)} {currency}
                       </div>
                       <button 
                         onClick={() => deleteTransaction(tx.id)}
