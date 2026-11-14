@@ -5,7 +5,7 @@ const RATES = {
   '€': 0.92,
   '₸': 495,
   '₼': 1.70,
-  '฿': 35.5, // Тайский бат
+  '฿': 35.5,
   'USDT': 1,
   'TON': 5.5
 };
@@ -24,10 +24,11 @@ const t = {
     history: "История операций",
     viewAll: "Подробнее",
     close: "Закрыть",
-    noExpenses: "Пока нет расходов. Добавьте первый!",
+    noExpenses: "Пока нет расходов за выбранный период.",
     noHistory: "История операций пуста",
     totalSpent: "Всего потрачено",
     delete: "Удалить",
+    resetFilter: "Сбросить фильтр категории",
     periods: { day: "День", week: "Неделя", month: "Месяц", year: "Год" },
     categories: { 
       housing: "🏡 Жилье", 
@@ -50,10 +51,11 @@ const t = {
     history: "Transaction History",
     viewAll: "View All",
     close: "Close",
-    noExpenses: "No expenses yet.",
+    noExpenses: "No expenses for selected period.",
     noHistory: "No transactions yet",
     totalSpent: "Total Spent",
     delete: "Delete",
+    resetFilter: "Reset category filter",
     periods: { day: "Day", week: "Week", month: "Month", year: "Year" },
     categories: { 
       housing: "🏡 Housing", 
@@ -76,10 +78,11 @@ const t = {
     history: "Операциялар тарихы",
     viewAll: "Толығырақ",
     close: "Жабу",
-    noExpenses: "Әзірге шығындар жоқ.",
+    noExpenses: "Таңдалған кезеңде шығындар жоқ.",
     noHistory: "Транзакциялар жоқ",
     totalSpent: "Барлығы жұмсалды",
     delete: "Жою",
+    resetFilter: "Санат сүзгісін тазарту",
     periods: { day: "Күн", week: "Апта", month: "Ай", year: "Жыл" },
     categories: { 
       housing: "🏡 Тұрғын үй", 
@@ -102,10 +105,11 @@ const t = {
     history: "Əməliyyat tarixçəsi",
     viewAll: "Ətraflı",
     close: "Bağla",
-    noExpenses: "Hələ xərc yoxdur.",
+    noExpenses: "Seçilmiş dövr üçün xərc yoxdur.",
     noHistory: "Əməliyyat yoxdur",
     totalSpent: "Ümumi xərc",
     delete: "Sil",
+    resetFilter: "Kateqoriya filtrini sıfırla",
     periods: { day: "Gün", week: "Həftə", month: "Ay", year: "İl" },
     categories: { 
       housing: "🏡 Mənzil", 
@@ -118,7 +122,7 @@ const t = {
 };
 
 const CATEGORY_COLORS = {
-  housing: "#d48344",     
+  housing: "#d48344",      
   utilities: "#4a7c59",   
   groceries: "#3b82f6",   
   restaurants: "#8c384a", 
@@ -134,20 +138,20 @@ export default function Home() {
     return 1500;
   });
 
-  const [expensesUSD, setExpensesUSD] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('fin_expenses');
-      return saved !== null ? JSON.parse(saved) : { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
-    }
-    return { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
-  });
-
   const [transactions, setTransactions] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fin_txs');
-      return saved !== null ? JSON.parse(saved) : [];
+      if (saved !== null) return JSON.parse(saved);
     }
-    return [];
+    // Демо-данные с реальными timestamp для проверки периодов
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    return [
+      { id: now, type: 'expense', categoryKey: 'groceries', title: 'Продукты (магазин/рынок)', amountUSD: 123, timestamp: now - 1000 * 60 * 5, date: 'Только что' },
+      { id: now - 1, type: 'expense', categoryKey: 'housing', title: 'Жилье', amountUSD: 300, timestamp: now - day * 2, date: '2 дня назад' },
+      { id: now - 2, type: 'income', title: 'Пополнение', amountUSD: 500, timestamp: now - day * 5, date: '5 дней назад' },
+      { id: now - 3, type: 'expense', categoryKey: 'restaurants', title: 'Кафе / рестораны', amountUSD: 200, timestamp: now - day * 15, date: '15 дней назад' }
+    ];
   });
 
   const [amount, setAmount] = useState('');
@@ -156,13 +160,13 @@ export default function Home() {
   const [category, setCategory] = useState('groceries');
   const [activeTab, setActiveTab] = useState('expense');
   const [period, setPeriod] = useState('month');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(null);
   const [showAllModal, setShowAllModal] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('fin_balance', baseBalanceUSD);
-    localStorage.setItem('fin_expenses', JSON.stringify(expensesUSD));
     localStorage.setItem('fin_txs', JSON.stringify(transactions));
-  }, [baseBalanceUSD, expensesUSD, transactions]);
+  }, [baseBalanceUSD, transactions]);
 
   const dict = t[lang];
   const rate = RATES[currency];
@@ -175,6 +179,50 @@ export default function Home() {
     return Math.round(converted).toLocaleString('en-US');
   };
 
+  // Фильтрация транзакций по выбранному периоду (День, Неделя, Месяц, Год)
+  const filteredByPeriodTransactions = transactions.filter(tx => {
+    if (!tx.timestamp) return true; // если старая запись без таймстампа
+    const now = Date.now();
+    const diff = now - tx.timestamp;
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (period === 'day') return diff <= dayMs;
+    if (period === 'week') return diff <= 7 * dayMs;
+    if (period === 'month') return diff <= 30 * dayMs;
+    if (period === 'year') return diff <= 365 * dayMs;
+    return true;
+  });
+
+  // Расчет расходов по категориям на основе отфильтрованных по периоду данных
+  const periodExpenses = { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
+  filteredByPeriodTransactions.forEach(tx => {
+    if (tx.type === 'expense') {
+      const cat = tx.categoryKey || 'other';
+      periodExpenses[cat] = (periodExpenses[cat] || 0) + tx.amountUSD;
+    }
+  });
+
+  const totalSpentUSD = Object.values(periodExpenses).reduce((a, b) => a + b, 0);
+  const categoryKeys = ['housing', 'utilities', 'groceries', 'restaurants', 'other'];
+  
+  let cumulativePercent = 0;
+  const chartSegments = categoryKeys.map(key => {
+    const val = periodExpenses[key] || 0;
+    const percent = totalSpentUSD > 0 ? (val / totalSpentUSD) * 100 : 0;
+    const strokeDasharray = `${percent} ${100 - percent}`;
+    const strokeDashoffset = -cumulativePercent;
+    cumulativePercent += percent;
+    return { key, val, percent, strokeDasharray, strokeDashoffset, color: CATEGORY_COLORS[key] };
+  });
+
+  // Финальный список для отображения в истории (учитывает и период, и клик по категории)
+  const displayedTransactions = filteredByPeriodTransactions.filter(tx => {
+    if (selectedCategoryFilter) {
+      return tx.type === 'expense' && tx.categoryKey === selectedCategoryFilter;
+    }
+    return true;
+  });
+
   const handleAction = (e) => {
     e.preventDefault();
     const numAmount = Number(amount);
@@ -185,55 +233,32 @@ export default function Home() {
 
     if (activeTab === 'expense') {
       setBaseBalanceUSD(prev => prev - valInUSD);
-      setExpensesUSD(prev => ({
-        ...prev,
-        [category]: (prev[category] || 0) + valInUSD
-      }));
       setTransactions(prev => [
-        { id: newTxId, type: 'expense', categoryKey: category, title: dict.categories[category], amountUSD: valInUSD, date: 'Только что' },
+        { id: newTxId, type: 'expense', categoryKey: category, title: dict.categories[category], amountUSD: valInUSD, timestamp: Date.now(), date: 'Только что' },
         ...prev
       ]);
     } else {
       setBaseBalanceUSD(prev => prev + valInUSD);
       setTransactions(prev => [
-        { id: newTxId, type: 'income', title: dict.addIncome, amountUSD: valInUSD, date: 'Только что' },
+        { id: newTxId, type: 'income', title: dict.addIncome, amountUSD: valInUSD, timestamp: Date.now(), date: 'Только что' },
         ...prev
       ]);
     }
     setAmount('');
   };
 
-  // Функция удаления транзакции с пересчетом баланса и графиков
   const deleteTransaction = (id) => {
     const txToDelete = transactions.find(tx => tx.id === id);
     if (!txToDelete) return;
 
     if (txToDelete.type === 'expense') {
       setBaseBalanceUSD(prev => prev + txToDelete.amountUSD);
-      setExpensesUSD(prev => {
-        const catKey = txToDelete.categoryKey || 'other';
-        const updatedVal = Math.max(0, (prev[catKey] || 0) - txToDelete.amountUSD);
-        return { ...prev, [catKey]: updatedVal };
-      });
     } else {
       setBaseBalanceUSD(prev => prev - txToDelete.amountUSD);
     }
 
     setTransactions(prev => prev.filter(tx => tx.id !== id));
   };
-
-  const totalSpentUSD = Object.values(expensesUSD).reduce((a, b) => a + b, 0);
-  const categoryKeys = ['housing', 'utilities', 'groceries', 'restaurants', 'other'];
-  
-  let cumulativePercent = 0;
-  const chartSegments = categoryKeys.map(key => {
-    const val = expensesUSD[key] || 0;
-    const percent = totalSpentUSD > 0 ? (val / totalSpentUSD) * 100 : 0;
-    const strokeDasharray = `${percent} ${100 - percent}`;
-    const strokeDashoffset = -cumulativePercent;
-    cumulativePercent += percent;
-    return { key, val, percent, strokeDasharray, strokeDashoffset, color: CATEGORY_COLORS[key] };
-  });
 
   return (
     <div style={{ 
@@ -365,12 +390,23 @@ export default function Home() {
         </button>
       </form>
 
-      {/* График аналитики */}
+      {/* График аналитики (интерактивный) */}
       <div style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", 
         marginBottom: "16px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
-        <h3 style={{ margin: "0 0 14px 0", fontSize: "15px", fontWeight: "600", textAlign: "center", color: "#f2ece1" }}>{dict.analytics}</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+          <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "#f2ece1" }}>{dict.analytics}</h3>
+          {selectedCategoryFilter && (
+            <button 
+              onClick={() => setSelectedCategoryFilter(null)}
+              style={{ background: "#2b3530", border: "none", color: "#d48344", fontSize: "11px", fontWeight: "600", padding: "4px 8px", borderRadius: "8px", cursor: "pointer" }}
+            >
+              ✕ {dict.resetFilter}
+            </button>
+          )}
+        </div>
+
         {totalSpentUSD === 0 ? (
           <p style={{ color: "#9da6a0", fontSize: "13px", textAlign: "center", margin: 0 }}>{dict.noExpenses}</p>
         ) : (
@@ -382,12 +418,13 @@ export default function Home() {
                     <circle
                       key={seg.key} cx="18" cy="18" r="15.915" fill="transparent"
                       stroke={seg.color} strokeWidth="3.8" strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset}
-                      style={{ transition: "all 0.4s ease" }}
+                      onClick={() => setSelectedCategoryFilter(selectedCategoryFilter === seg.key ? null : seg.key)}
+                      style={{ transition: "all 0.4s ease", cursor: "pointer", opacity: selectedCategoryFilter && selectedCategoryFilter !== seg.key ? 0.3 : 1 }}
                     />
                   )
                 ))}
               </svg>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                 <span style={{ fontSize: "10px", color: "#9da6a0", fontWeight: "600" }}>{dict.totalSpent}</span>
                 <span style={{ fontSize: "13px", fontWeight: "700", marginTop: "2px", color: "#fff" }}>{formatVal(totalSpentUSD)} {currency}</span>
               </div>
@@ -395,7 +432,16 @@ export default function Home() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {chartSegments.map(seg => (
-                <div key={seg.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
+                <div 
+                  key={seg.key} 
+                  onClick={() => setSelectedCategoryFilter(selectedCategoryFilter === seg.key ? null : seg.key)}
+                  style={{ 
+                    display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", 
+                    padding: "6px 8px", borderRadius: "10px", cursor: "pointer",
+                    background: selectedCategoryFilter === seg.key ? "#25302b" : "transparent",
+                    border: selectedCategoryFilter === seg.key ? "1px solid #3b4d44" : "1px solid transparent"
+                  }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: seg.color, display: "inline-block" }}></span>
                     <span style={{ color: "#d2cbc0" }}>{dict.categories[seg.key]}</span>
@@ -410,13 +456,15 @@ export default function Home() {
         )}
       </div>
 
-      {/* История транзакций (кратко) */}
+      {/* История транзакций */}
       <div style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "#f2ece1" }}>{dict.history}</h3>
-          {transactions.length > 3 && (
+          <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "#f2ece1" }}>
+            {selectedCategoryFilter ? `История: ${dict.categories[selectedCategoryFilter]}` : dict.history}
+          </h3>
+          {filteredByPeriodTransactions.length > 3 && (
             <button 
               onClick={() => setShowAllModal(true)}
               style={{ background: "transparent", border: "none", color: "#d48344", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
@@ -426,11 +474,11 @@ export default function Home() {
           )}
         </div>
 
-        {transactions.length === 0 ? (
+        {displayedTransactions.length === 0 ? (
           <p style={{ color: "#9da6a0", fontSize: "13px", textAlign: "center", margin: 0 }}>{dict.noHistory}</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {transactions.slice(0, 3).map(tx => (
+            {displayedTransactions.slice(0, 3).map(tx => (
               <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "8px", borderBottom: "1px solid #242c27" }}>
                 <div>
                   <div style={{ fontWeight: "600", fontSize: "13px", color: "#eae4d9" }}>{tx.title}</div>
@@ -454,7 +502,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Модальное окно «Подробнее» со всей историей и возможностью удаления */}
+      {/* Модальное окно «Подробнее» */}
       {showAllModal && (
         <div style={{ 
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
@@ -474,11 +522,11 @@ export default function Home() {
                 {dict.close}
               </button>
             </div>
-            {transactions.length === 0 ? (
+            {displayedTransactions.length === 0 ? (
               <p style={{ color: "#9da6a0", fontSize: "13px", textAlign: "center", margin: "20px 0" }}>{dict.noHistory}</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {transactions.map(tx => (
+                {displayedTransactions.map(tx => (
                   <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "10px", borderBottom: "1px solid #242c27" }}>
                     <div>
                       <div style={{ fontWeight: "600", fontSize: "14px", color: "#eae4d9" }}>{tx.title}</div>
