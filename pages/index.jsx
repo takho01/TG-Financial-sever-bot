@@ -190,11 +190,14 @@ export default function Home() {
   const totalExpenseUSD = transactions.filter(tx => tx.type === 'expense').reduce((acc, tx) => acc + Number(tx.amount_usd || tx.amountUSD), 0);
   const currentBalanceUSD = totalIncomeUSD - totalExpenseUSD;
 
-  // Фильтрация по периоду
+  // Безопасная фильтрация по периоду
   const filteredByPeriodTransactions = transactions.filter(tx => {
     if (!tx.timestamp) return true;
+    const ts = Number(tx.timestamp);
+    if (isNaN(ts)) return true; // если timestamp битый, пропускаем без ошибки
+
     const now = Date.now();
-    const diff = now - Number(tx.timestamp);
+    const diff = now - ts;
     const dayMs = 24 * 60 * 60 * 1000;
 
     if (period === 'day') return diff <= dayMs;
