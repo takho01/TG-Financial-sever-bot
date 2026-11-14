@@ -12,16 +12,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data: rows });
     }
 
-  // Добавление новой транзакции (POST)
+    // Добавление новой транзакции (POST)
     if (req.method === 'POST') {
-      const { chatId, type, categoryKey, title, amountUSD, date } = req.body;
+      const { chatId, type, categoryKey, title, amountUSD } = req.body;
       const timestamp = Date.now();
       const userChatId = chatId ? String(chatId) : 'default_user';
       const catKey = categoryKey ? String(categoryKey) : null;
+      const dateStr = 'Только что';
 
       const result = await sql`
         INSERT INTO transactions (chat_id, type, category_key, title, amount_usd, date, timestamp)
-        VALUES (${userChatId}, ${type}, ${catKey}, ${title}, ${amountUSD}, ${date}, ${timestamp})
+        VALUES (${userChatId}, ${type}, ${catKey}, ${title}, ${amountUSD}, ${dateStr}, ${timestamp})
         RETURNING id, chat_id, type, category_key, title, amount_usd, date, timestamp;
       `;
 
