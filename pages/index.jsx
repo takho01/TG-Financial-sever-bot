@@ -206,7 +206,7 @@ export default function Home() {
     if (period === 'year') return diff <= 365 * dayMs;
     return true;
   });
-
+  
   // Расходы по категориям
   const periodExpenses = { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
   filteredByPeriodTransactions.forEach(tx => {
