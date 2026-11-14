@@ -233,18 +233,22 @@ export default function Home() {
     return true;
   });
 
-  // Добавление транзакции через API в Neon
+ // Добавление транзакции через API в Neon
   const handleAction = async (e) => {
     e.preventDefault();
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) return;
 
     const valInUSD = numAmount / rate;
+    
+    // Универсальный заголовок в зависимости от типа
+    const txTitle = activeTab === 'expense' ? (dict.categories[category] || category) : dict.addIncome;
+
     const newTxData = {
       chatId: chatId,
       type: activeTab,
       categoryKey: activeTab === 'expense' ? category : null,
-      title: activeTab === 'expense' ? dict.categories[category] : dict.addIncome,
+      title: txTitle,
       amountUSD: valInUSD,
       date: 'Только что'
     };
@@ -256,12 +260,17 @@ export default function Home() {
         body: JSON.stringify(newTxData)
       });
       const json = await res.json();
+      
       if (json.success) {
         setTransactions(prev => [json.data, ...prev]);
         setAmount('');
+      } else {
+        console.error("Ошибка сервера при добавлении:", json.error);
+        alert("Не удалось сохранить транзакцию: " + (json.error || 'Ошибка сервера'));
       }
     } catch (err) {
-      console.error("Ошибка сохранения транзакции:", err);
+      console.error("Ошибка соединения:", err);
+      alert("Ошибка сети. Проверьте подключение.");
     }
   };
 
