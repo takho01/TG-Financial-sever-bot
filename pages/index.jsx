@@ -231,7 +231,7 @@ export default function Home() {
     return true;
   });
 
-  const handleAction = async (e) => {
+const handleAction = async (e) => {
     e.preventDefault();
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) return;
@@ -254,16 +254,25 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTxData)
       });
-      const json = await res.json();
       
+      const textResponse = await res.text();
+      let json;
+      try {
+        json = JSON.parse(textResponse);
+      } catch (parseErr) {
+        console.error("Ответ сервера не JSON:", textResponse);
+        alert("Ошибка сервера: " + textResponse.substring(0, 80));
+        return;
+      }
+
       if (json.success) {
         setTransactions(prev => [json.data, ...prev]);
         setAmount('');
       } else {
-        alert("Не удалось сохранить транзакцию: " + (json.error || 'Ошибка сервера'));
+        alert("Не удалось сохранить транзакцию: " + (json.error || 'Ошибка бэкенда'));
       }
     } catch (err) {
-      console.error("Ошибка соединения:", err);
+      console.error("Ошибка сети:", err);
       alert("Ошибка сети. Проверьте подключение.");
     }
   };
