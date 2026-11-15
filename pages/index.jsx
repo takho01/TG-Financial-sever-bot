@@ -143,7 +143,6 @@ export default function Home() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(null);
   const [showAllModal, setShowAllModal] = useState(false);
 
-  // Получаем Telegram ID пользователя при запуске
   useEffect(() => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -154,14 +153,12 @@ export default function Home() {
     }
   }, []);
 
-  // Загрузка транзакций из базы Neon
   useEffect(() => {
     async function fetchTransactions() {
       try {
         const res = await fetch('/api/transactions');
         const json = await res.json();
         if (json.success) {
-          // Фильтруем транзакции конкретно для текущего пользователя (или показываем все, если бэкенд возвращает общие, но лучше по chatId)
           const userTxs = json.data.filter(tx => !tx.chat_id || tx.chat_id === chatId || chatId === 'default_user');
           setTransactions(userTxs);
         }
@@ -185,16 +182,15 @@ export default function Home() {
     return Math.round(converted).toLocaleString('en-US');
   };
 
-  // Расчет текущего баланса на основе истории (стартовый баланс 0 + доходы - расходы)
   const totalIncomeUSD = transactions.filter(tx => tx.type === 'income').reduce((acc, tx) => acc + Number(tx.amount_usd || tx.amountUSD), 0);
   const totalExpenseUSD = transactions.filter(tx => tx.type === 'expense').reduce((acc, tx) => acc + Number(tx.amount_usd || tx.amountUSD), 0);
   const currentBalanceUSD = totalIncomeUSD - totalExpenseUSD;
 
-  // Безопасная фильтрация по периоду
+  // Абсолютно безопасная фильтрация без падений
   const filteredByPeriodTransactions = transactions.filter(tx => {
     if (!tx.timestamp) return true;
     const ts = Number(tx.timestamp);
-    if (isNaN(ts)) return true; // если timestamp битый, пропускаем без ошибки
+    if (isNaN(ts)) return true;
 
     const now = Date.now();
     const diff = now - ts;
@@ -207,7 +203,6 @@ export default function Home() {
     return true;
   });
   
-  // Расходы по категориям
   const periodExpenses = { housing: 0, utilities: 0, groceries: 0, restaurants: 0, other: 0 };
   filteredByPeriodTransactions.forEach(tx => {
     if (tx.type === 'expense') {
@@ -236,15 +231,12 @@ export default function Home() {
     return true;
   });
 
- // Добавление транзакции через API в Neon
   const handleAction = async (e) => {
     e.preventDefault();
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) return;
 
     const valInUSD = numAmount / rate;
-    
-    // Универсальный заголовок в зависимости от типа
     const txTitle = activeTab === 'expense' ? (dict.categories[category] || category) : dict.addIncome;
 
     const newTxData = {
@@ -268,7 +260,6 @@ export default function Home() {
         setTransactions(prev => [json.data, ...prev]);
         setAmount('');
       } else {
-        console.error("Ошибка сервера при добавлении:", json.error);
         alert("Не удалось сохранить транзакцию: " + (json.error || 'Ошибка сервера'));
       }
     } catch (err) {
@@ -277,7 +268,6 @@ export default function Home() {
     }
   };
 
-  // Удаление транзакции через API из Neon
   const deleteTransaction = async (id) => {
     try {
       const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
@@ -305,7 +295,6 @@ export default function Home() {
       minHeight: "100vh",
       boxSizing: "border-box"
     }}>
-      {/* Шапка: Селекторы */}
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", gap: "12px" }}>
         <select 
           value={lang} onChange={(e) => setLang(e.target.value)}
@@ -333,7 +322,6 @@ export default function Home() {
 
       <h2 style={{ textAlign: "center", marginBottom: "16px", fontWeight: "700", fontSize: "22px", color: "#f2ece1" }}>{dict.title}</h2>
       
-      {/* Баланс (теперь по умолчанию 0) */}
       <div style={{ 
         background: "linear-gradient(145deg, #1f2622 0%, #171c19 100%)", 
         border: "1px solid #2b3530", color: "#eae4d9", padding: "24px", borderRadius: "22px", 
@@ -343,7 +331,6 @@ export default function Home() {
         <h1 style={{ margin: "10px 0 0 0", fontSize: "34px", fontWeight: "700", color: "#fff" }}>{formatVal(currentBalanceUSD)} {currency}</h1>
       </div>
 
-      {/* Таймлайн периодов */}
       <div style={{ display: "flex", background: "#1b211e", padding: "4px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #2b3530" }}>
         {['day', 'week', 'month', 'year'].map(p => (
           <button 
@@ -360,7 +347,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Переключатель вкладки Расход / Доход */}
       <div style={{ display: "flex", background: "#1b211e", padding: "4px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #2b3530" }}>
         <button 
           type="button" onClick={() => setActiveTab('expense')}
@@ -386,7 +372,6 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Форма ввода */}
       <form onSubmit={handleAction} style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", 
         marginBottom: "16px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
@@ -424,7 +409,6 @@ export default function Home() {
         </button>
       </form>
 
-      {/* График аналитики */}
       <div style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", 
         marginBottom: "16px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
@@ -490,7 +474,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* История транзакций */}
       <div style={{ 
         background: "#1a201d", border: "1px solid #2b3530", padding: "18px", borderRadius: "22px", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" 
       }}>
@@ -536,7 +519,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Модальное окно */}
       {showAllModal && (
         <div style={{ 
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
