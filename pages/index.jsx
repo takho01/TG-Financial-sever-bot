@@ -415,16 +415,23 @@ const handleAction = async (e) => {
         {activeTab === 'expense' && (
           <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", fontSize: "12px", color: "#9da6a0", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase" }}>{dict.category}</label>
-            <select 
-              value={category} onChange={(e) => setCategory(e.target.value)}
-              style={{ width: "100%", padding: "12px", borderRadius: "14px", border: "1px solid #303d36", background: "#141715", color: "white", fontSize: "14px", outline: "none", cursor: "pointer", boxSizing: "border-box" }}
-            >
-              <option value="housing">{dict.categories.housing}</option>
-              <option value="utilities">{dict.categories.utilities}</option>
-              <option value="groceries">{dict.categories.groceries}</option>
-              <option value="restaurants">{dict.categories.restaurants}</option>
-              <option value="other">{dict.categories.other}</option>
-            </select>
+            <div style={{ position: "relative" }}>
+              <select 
+                value={category} onChange={(e) => setCategory(e.target.value)}
+                style={{ 
+                  width: "100%", background: "#141715", color: "white", border: "1px solid #303d36", 
+                  padding: "12px 14px", borderRadius: "14px", fontSize: "14px", outline: "none", 
+                  cursor: "pointer", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none" 
+                }}
+              >
+                <option value="housing">{dict.categories.housing}</option>
+                <option value="utilities">{dict.categories.utilities}</option>
+                <option value="groceries">{dict.categories.groceries}</option>
+                <option value="restaurants">{dict.categories.restaurants}</option>
+                <option value="other">{dict.categories.other}</option>
+              </select>
+              <div style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#9da6a0", fontSize: "11px" }}>▼</div>
+            </div>
           </div>
         )}
 
