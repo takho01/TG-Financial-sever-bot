@@ -304,29 +304,48 @@ const handleAction = async (e) => {
       minHeight: "100vh",
       boxSizing: "border-box"
     }}>
+      {/* Шапка: Кастомные селекторы */}
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", gap: "12px" }}>
-        <select 
-          value={lang} onChange={(e) => setLang(e.target.value)}
-          style={{ background: "#1e2320", color: "#eae4d9", border: "1px solid #2f3833", padding: "12px 14px", borderRadius: "14px", fontSize: "15px", fontWeight: "600", outline: "none", flex: 1, cursor: "pointer" }}
-        >
-          <option value="ru">🇷🇺 Русский</option>
-          <option value="en">🇬🇧 English</option>
-          <option value="kz">🇰🇿 Қазақша</option>
-          <option value="az">🇦🇿 Azərbaycanca</option>
-        </select>
+        
+        {/* Выбор языка */}
+        <div style={{ position: "relative", flex: 1 }}>
+          <select 
+            value={lang} onChange={(e) => setLang(e.target.value)}
+            style={{ 
+              width: "100%", background: "#1a201d", color: "#eae4d9", border: "1px solid #2b3530", 
+              padding: "12px 14px", borderRadius: "14px", fontSize: "14px", fontWeight: "600", 
+              outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" 
+            }}
+          >
+            <option value="ru">🇷🇺 Русский</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="kz">🇰🇿 Қазақша</option>
+            <option value="az">🇦🇿 Azərbaycanca</option>
+          </select>
+          <div style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#9da6a0", fontSize: "11px" }}>▼</div>
+        </div>
 
-        <select 
-          value={currency} onChange={(e) => setCurrency(e.target.value)}
-          style={{ background: "#1e2320", color: "#eae4d9", border: "1px solid #2f3833", padding: "12px 14px", borderRadius: "14px", fontSize: "15px", fontWeight: "600", outline: "none", flex: 1, cursor: "pointer" }}
-        >
-          <option value="$">USD ($)</option>
-          <option value="€">EUR (€)</option>
-          <option value="₸">KZT (₸)</option>
-          <option value="₼">AZN (₼)</option>
-          <option value="฿">THB (฿)</option>
-          <option value="USDT">USDT</option>
-          <option value="TON">TON</option>
-        </select>
+        {/* Выбор валюты */}
+        <div style={{ position: "relative", flex: 1 }}>
+          <select 
+            value={currency} onChange={(e) => setCurrency(e.target.value)}
+            style={{ 
+              width: "100%", background: "#1a201d", color: "#eae4d9", border: "1px solid #2b3530", 
+              padding: "12px 14px", borderRadius: "14px", fontSize: "14px", fontWeight: "600", 
+              outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" 
+            }}
+          >
+            <option value="$">USD ($)</option>
+            <option value="€">EUR (€)</option>
+            <option value="₸">KZT (₸)</option>
+            <option value="₼">AZN (₼)</option>
+            <option value="฿">THB (฿)</option>
+            <option value="USDT">USDT</option>
+            <option value="TON">TON</option>
+          </select>
+          <div style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#9da6a0", fontSize: "11px" }}>▼</div>
+        </div>
+
       </div>
 
       <h2 style={{ textAlign: "center", marginBottom: "16px", fontWeight: "700", fontSize: "22px", color: "#f2ece1" }}>{dict.title}</h2>
