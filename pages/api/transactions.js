@@ -15,7 +15,8 @@ export default async function handler(req, res) {
     // Добавление новой транзакции (POST)
     if (req.method === 'POST') {
       const { chatId, type, categoryKey, title, amountUSD } = req.body;
-      const timestamp = Date.now();
+      
+      const timestamp = Date.now(); // Всегда число
       const userChatId = chatId ? String(chatId) : 'default_user';
       const catKey = categoryKey ? String(categoryKey) : null;
       const dateStr = 'Только что';
