@@ -8,7 +8,7 @@ const RATES = {
   '฿': 35.5,
   'USDT': 1,
   'TON': 5.5,
-  '₽': 0.012 // Начальный дефолтный коэффициент (1 / 82), дальше он обновится автоматически через API
+  '₽': 82 // Начальный дефолтный коэффициент (1 / 82), дальше он обновится автоматически через API
 };
 
 const t = {
@@ -130,8 +130,28 @@ const CATEGORY_COLORS = {
   other: "#737a72"        
 };
 
-export default function Home() {
-  const [chatId, setChatId] = useState('default_user');
+function getTg() {
+  return typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
+}
+
+async function api(path, options = {}) {
+  const tg = getTg();
+  if (!tg?.initData) throw new Error('NO_TELEGRAM');
+  const res = await fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `tma ${tg.initData}`,
+      ...(options.headers || {}),
+    },
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || `HTTP_${res.status}`);
+  return json;
+}
+
+  const [rates, setRates] = useState(RATES);
+  const [noTelegram, setNoTelegram] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -145,35 +165,39 @@ export default function Home() {
   const [showAllModal, setShowAllModal] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
-      if (tg.initDataUnsafe?.user?.id) {
-        setChatId(String(tg.initDataUnsafe.user.id));
-      }
+    const tg = getTg();
+    if (!tg?.initData) {
+      setNoTelegram(true);
+      setLoading(false);
+      return;
     }
+    tg.ready();
+    api('/api/transactions')
+      .then((json) => setTransactions(json.data))
+      .catch((err) => console.error('Ошибка загрузки:', err))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    async function fetchTransactions() {
-      try {
-        const res = await fetch('/api/transactions');
-        const json = await res.json();
-        if (json.success) {
-          const userTxs = json.data.filter(tx => !tx.chat_id || tx.chat_id === chatId || chatId === 'default_user');
-          setTransactions(userTxs);
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.result === 'success' && d.rates) {
+          setRates((prev) => ({
+            ...prev,
+            '€': d.rates.EUR ?? prev['€'],
+            '₸': d.rates.KZT ?? prev['₸'],
+            '₼': d.rates.AZN ?? prev['₼'],
+            '฿': d.rates.THB ?? prev['฿'],
+            '₽': d.rates.RUB ?? prev['₽'],
+          }));
         }
-      } catch (err) {
-        console.error("Ошибка загрузки транзакций:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchTransactions();
-  }, [chatId]);
+      })
+      .catch(() => {});
+  }, []);
 
   const dict = t[lang];
-  const rate = RATES[currency];
+  const rate = rates[currency];
 
   const formatVal = (valUSD) => {
     const converted = valUSD * rate;
