@@ -350,6 +350,7 @@ async function api(path, options = {}) {
             <option value="₸">KZT (₸)</option>
             <option value="₼">AZN (₼)</option>
             <option value="฿">THB (฿)</option>
+            <option value="₽">RUB (₽)</option>
             <option value="USDT">USDT</option>
             <option value="TON">TON</option>
           </select>
