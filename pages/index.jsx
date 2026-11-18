@@ -134,6 +134,7 @@ function getTg() {
   return typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
 }
 
+export default function Home() {
 async function api(path, options = {}) {
   const tg = getTg();
   if (!tg?.initData) throw new Error('NO_TELEGRAM');
