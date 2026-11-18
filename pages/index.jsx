@@ -256,7 +256,7 @@ async function api(path, options = {}) {
     return true;
   });
 
-const handleAction = async (e) => {
+  const handleAction = async (e) => {
     e.preventDefault();
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) return;
@@ -264,55 +264,40 @@ const handleAction = async (e) => {
     const valInUSD = numAmount / rate;
     const txTitle = activeTab === 'expense' ? (dict.categories[category] || category) : dict.addIncome;
 
-    const newTxData = {
-      chatId: chatId,
-      type: activeTab,
-      categoryKey: activeTab === 'expense' ? category : null,
-      title: txTitle,
-      amountUSD: valInUSD,
-      date: 'Только что'
-    };
-
     try {
-      const res = await fetch('/api/transactions', {
+      const json = await api('/api/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTxData)
+        body: JSON.stringify({
+          type: activeTab,
+          categoryKey: activeTab === 'expense' ? category : null,
+          title: txTitle,
+          amountUSD: valInUSD,
+        }),
       });
-      
-      const textResponse = await res.text();
-      let json;
-      try {
-        json = JSON.parse(textResponse);
-      } catch (parseErr) {
-        console.error("Ответ сервера не JSON:", textResponse);
-        alert("Ошибка сервера: " + textResponse.substring(0, 80));
-        return;
-      }
-
-      if (json.success) {
-        setTransactions(prev => [json.data, ...prev]);
-        setAmount('');
-      } else {
-        alert("Не удалось сохранить транзакцию: " + (json.error || 'Ошибка бэкенда'));
-      }
+      setTransactions((prev) => [json.data, ...prev]);
+      setAmount('');
     } catch (err) {
-      console.error("Ошибка сети:", err);
-      alert("Ошибка сети. Проверьте подключение.");
+      console.error('Ошибка сохранения:', err);
+      alert('Не удалось сохранить: ' + err.message);
     }
   };
 
   const deleteTransaction = async (id) => {
     try {
-      const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
-        setTransactions(prev => prev.filter(tx => tx.id !== id));
-      }
+      await api(`/api/transactions?id=${id}`, { method: 'DELETE' });
+      setTransactions((prev) => prev.filter((tx) => tx.id !== id));
     } catch (err) {
-      console.error("Ошибка удаления:", err);
+      console.error('Ошибка удаления:', err);
     }
   };
+
+  if (noTelegram) {
+    return (
+      <div style={{ textAlign: "center", padding: "50px 20px", color: "#eae4d9", background: "#141715", minHeight: "100vh" }}>
+        Откройте приложение через Telegram
+      </div>
+    );
+  }
 
   if (loading) {
     return <div style={{ textAlign: "center", padding: "50px", color: "#eae4d9", background: "#141715", minHeight: "100vh" }}>Загрузка...</div>;
